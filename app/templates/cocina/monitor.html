@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}— Cocina{% endblock %}
+
+{% block head %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Monitor de cocina</h1>
+    <span class="page-sub">Comandas pendientes</span>
+</div>
+
+<div class="monitor-grid" id="monitorGrid">
+    {% for item in items %}
+    <div class="monitor-card {{ item.estado }}" id="card-{{ item.id }}"
+         data-enviado="{{ item.enviado_en.isoformat() }}">
+        <div class="monitor-mesa">Mesa {{ item.comanda.mesa.numero }}</div>
+        <div class="monitor-plato">{{ item.cantidad }}x {{ item.producto.nombre }}</div>
+        {% if item.nota %}
+        <div class="monitor-nota">{{ item.nota }}</div>
+        {% endif %}
+        <div class="monitor-footer">
+            <span class="monitor-tiempo" id="tiempo-{{ item.id }}">0 min</span>
+            <button class="btn-sm" onclick="avanzar({{ item.id }})">
+                {% if item.estado == 'recibido' %}En proceso{% else %}Listo{% endif %}
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<p id="emptyMsg" style="font-size:13px;color:#888;{% if items %}display:none{% endif %}">
+    No hay pedidos pendientes en cocina.
+</p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const socket = io();
+
+socket.on("nuevo_pedido_cocina", (data) => {
+    location.reload();
+});
+
+socket.on("item_actualizado", (data) => {
+    if (data.tipo !== "comida") return;
+    const card = document.getElementById(`card-${data.item_id}`);
+    if (!card) return;
+    if (data.estado === "listo") {
+        card.remove();
+        checkEmpty();
+    } else {
+        card.className = `monitor-card ${data.estado}`;
+        const btn = card.querySelector("button");
+        btn.textContent = "Listo";
+    }
+});
+
+function avanzar(itemId) {
+    fetch(`/cocina/item/${itemId}/avanzar`, { method: "POST" })
+        .then(r => r.json())
+        .then(d => {
+            const card = document.getElementById(`card-${itemId}`);
+            if (d.estado === "listo") {
+                card.remove();
+                checkEmpty();
+            } else {
+                card.className = `monitor-card ${d.estado}`;
+                card.querySelector("button").textContent = "Listo";
+            }
+        });
+}
+
+function checkEmpty() {
+    const grid = document.getElementById("monitorGrid");
+    if (grid.children.length === 0) {
+        document.getElementById("emptyMsg").style.display = "block";
+    }
+}
+
+// actualizar tiempos transcurridos cada 30s
+function actualizarTiempos() {
+    document.querySelectorAll(".monitor-card").forEach(card => {
+        const enviado = new Date(card.dataset.enviado);
+        const ahora = new Date();
+        const minutos = Math.floor((ahora - enviado) / 60000);
+        const span = card.querySelector(".monitor-tiempo");
+        if (span) span.textContent = minutos + " min";
+        if (minutos > 20) card.classList.add("alerta");
+    });
+}
+actualizarTiempos();
+setInterval(actualizarTiempos, 30000);
+</script>
+{% endblock %}

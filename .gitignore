@@ -1,0 +1,24 @@
+# Entorno y secretos
+venv/
+.venv/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Base de datos local y respaldos
+*.db
+*.sqlite3
+instance/
+backups/
+*.bak
+
+# Editor / sistema
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}— Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <span class="page-sub">Resumen del día</span>
+</div>
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-label">Mesas totales</div>
+        <div class="metric-val">{{ total_mesas }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Mesas ocupadas</div>
+        <div class="metric-val">{{ mesas_ocupadas }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Productos en carta</div>
+        <div class="metric-val">{{ total_productos }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Usuarios activos</div>
+        <div class="metric-val">{{ total_usuarios }}</div>
+    </div>
+</div>
+
+<div class="section-grid">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Accesos rápidos</span>
+        </div>
+        <div class="quick-links">
+            <a href="{{ url_for('admin.carta') }}"    class="quick-btn">Gestionar carta</a>
+            <a href="{{ url_for('admin.usuarios') }}" class="quick-btn">Gestionar usuarios</a>
+            <a href="{{ url_for('mozo.dashboard') }}" class="quick-btn">Ver mesas</a>
+        </div>
+    </div>
+</div>
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-label">Total facturado hoy</div>
+        <div class="metric-val">S/ {{ "%.2f"|format(total_facturado_hoy) }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Mesas atendidas hoy</div>
+        <div class="metric-val">{{ mesas_atendidas_hoy }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Ticket promedio</div>
+        <div class="metric-val">S/ {{ "%.2f"|format(ticket_promedio) }}</div>
+    </div>
+</div>
+{% endblock %}

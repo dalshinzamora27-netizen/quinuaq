@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Quinuaq {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<nav class="navbar">
+    <div class="nav-logo">
+        <span class="logo-dot"></span>
+        <span class="logo-text">RestaurantOS</span>
+    </div>
+    <div class="nav-links">
+        {% if current_user.rol.nombre == 'admin' %}
+            <a href="{{ url_for('admin.dashboard') }}"   class="nav-link">Dashboard</a>
+            <a href="{{ url_for('admin.carta') }}"       class="nav-link">Carta</a>
+            <a href="{{ url_for('admin.usuarios') }}"    class="nav-link">Usuarios</a>
+            <a href="{{ url_for('mozo.dashboard') }}"    class="nav-link">Mesas</a>
+            <a href="{{ url_for('admin.reportes') }}"    class="nav-link">Reportes</a>
+        {% elif current_user.rol.nombre == 'mozo' %}
+            <a href="{{ url_for('mozo.dashboard') }}"    class="nav-link">Mesas</a>
+        {% elif current_user.rol.nombre == 'cocinero' %}
+            <a href="{{ url_for('cocina.dashboard') }}"  class="nav-link">Cocina</a>
+        {% elif current_user.rol.nombre == 'bartender' %}
+            <a href="{{ url_for('bar.dashboard') }}"     class="nav-link">Bar</a>
+        {% elif current_user.rol.nombre == 'cajero' %}
+            <a href="{{ url_for('cajero.dashboard') }}" class="nav-link">Cuentas</a>
+            <a href="{{ url_for('cajero.cierre') }}"    class="nav-link">Cierre</a>
+        {% endif %}
+    </div>
+    <div class="nav-right">
+        <button class="theme-toggle" id="themeToggle" title="Cambiar tema">🌙</button>
+        <span class="nav-user">{{ current_user.nombre }} — {{ current_user.rol.nombre|capitalize }}</span>
+        <a href="{{ url_for('auth.logout') }}" class="btn-logout">Salir</a>
+    </div>
+</nav>
+{% endif %}
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="flash">
+            {% for msg in messages %}<p>{{ msg }}</p>{% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

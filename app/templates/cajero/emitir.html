@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}— Emitir Mesa {{ mesa.numero }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Emitir comprobante — Mesa {{ mesa.numero }}</h1>
+</div>
+
+<div class="emitir-layout">
+    <div class="card">
+        <div class="card-header"><span class="card-title">Detalle de consumo</span></div>
+        <table class="table">
+            <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.nombre }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>S/ {{ "%.2f"|format(item.precio) }}</td>
+                    <td>S/ {{ "%.2f"|format(item.total) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="cuenta-totales">
+            <div class="cuenta-row"><span>Subtotal</span><span>S/ {{ "%.2f"|format(subtotal) }}</span></div>
+            <div class="cuenta-row"><span>IGV (18%)</span><span>S/ {{ "%.2f"|format(igv) }}</span></div>
+            <div class="cuenta-row cuenta-total"><span>Total</span><span id="totalVenta">S/ {{ "%.2f"|format(total) }}</span></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><span class="card-title">Tipo de comprobante</span></div>
+        <div class="emit-options">
+            <button class="emit-opt active" id="opt-nota_venta" onclick="setTipo('nota_venta')">Nota de venta</button>
+            <button class="emit-opt" id="opt-boleta" onclick="setTipo('boleta')">Boleta</button>
+            <button class="emit-opt" id="opt-factura" onclick="setTipo('factura')">Factura</button>
+        </div>
+
+        <div id="campoDni" class="form-group" style="margin-top:14px">
+            <label>DNI del cliente (opcional)</label>
+            <input type="text" id="inp-dni" placeholder="8 dígitos" maxlength="8">
+        </div>
+
+        <div id="camposFactura" style="display:none">
+            <div class="form-group">
+                <label>RUC de la empresa</label>
+                <input type="text" id="inp-ruc" placeholder="11 dígitos" maxlength="11">
+            </div>
+            <div class="form-group">
+                <label>Razón social</label>
+                <input type="text" id="inp-razon" placeholder="Nombre de la empresa">
+            </div>
+        </div>
+
+        <div class="card-header" style="margin-top:16px">
+            <span class="card-title">Métodos de pago</span>
+            <button class="btn-sm" onclick="agregarPago()">+ Agregar método</button>
+        </div>
+        <div id="pagosList"></div>
+        <div class="cuenta-row" style="margin-top:8px">
+            <span>Pagado</span>
+            <span id="pagadoTotal">S/ 0.00</span>
+        </div>
+        <div class="cuenta-row" id="rowFaltante" style="color:#993C1D">
+            <span>Falta</span>
+            <span id="faltanteTotal">S/ {{ "%.2f"|format(total) }}</span>
+        </div>
+
+        <div class="modal-actions" style="margin-top:16px">
+            <a href="{{ url_for('cajero.dashboard') }}" class="btn-secondary">Cancelar</a>
+            <button class="btn-primary" onclick="confirmarVenta()">Emitir</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TOTAL = {{ total }};
+let tipoActual = "nota_venta";
+let pagos = [];
+
+function setTipo(tipo) {
+    tipoActual = tipo;
+    document.querySelectorAll(".emit-opt").forEach(b => b.classList.remove("active"));
+    document.getElementById("opt-" + tipo).classList.add("active");
+    document.getElementById("camposFactura").style.display = tipo === "factura" ? "block" : "none";
+}
+
+function agregarPago() {
+    pagos.push({ metodo: "efectivo", monto: 0 });
+    renderPagos();
+}
+
+function quitarPago(idx) {
+    pagos.splice(idx, 1);
+    renderPagos();
+}
+
+function actualizarPago(idx, campo, valor) {
+    pagos[idx][campo] = campo === "monto" ? parseFloat(valor) || 0 : valor;
+    actualizarTotales();
+}
+
+function renderPagos() {
+    const list = document.getElementById("pagosList");
+    list.innerHTML = pagos.map((p, i) => `
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+            <select onchange="actualizarPago(${i},'metodo',this.value)" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd;font-size:12px">
+                <option value="efectivo" ${p.metodo==='efectivo'?'selected':''}>Efectivo</option>
+                <option value="tarjeta" ${p.metodo==='tarjeta'?'selected':''}>Tarjeta</option>
+                <option value="yape_plin" ${p.metodo==='yape_plin'?'selected':''}>Yape/Plin</option>
+            </select>
+            <input type="number" step="0.01" min="0" value="${p.monto}"
+                   oninput="actualizarPago(${i},'monto',this.value)"
+                   style="width:100px;padding:8px;border-radius:8px;border:1px solid #ddd;font-size:12px">
+            <button class="btn-icon" onclick="quitarPago(${i})">✕</button>
+        </div>
+    `).join("");
+    actualizarTotales();
+}
+
+function actualizarTotales() {
+    const pagado = pagos.reduce((a,p) => a + (p.monto||0), 0);
+    document.getElementById("pagadoTotal").textContent = "S/ " + pagado.toFixed(2);
+    const faltante = TOTAL - pagado;
+    document.getElementById("faltanteTotal").textContent = "S/ " + faltante.toFixed(2);
+    document.getElementById("rowFaltante").style.display = Math.abs(faltante) > 0.001 ? "flex" : "none";
+}
+
+// arranca con un pago en efectivo por el total
+pagos.push({ metodo: "efectivo", monto: TOTAL });
+renderPagos();
+
+function confirmarVenta() {
+    const data = {
+        tipo: tipoActual,
+        dni_cliente: document.getElementById("inp-dni").value,
+        ruc_cliente: tipoActual === "factura" ? document.getElementById("inp-ruc").value : "",
+        razon_social: tipoActual === "factura" ? document.getElementById("inp-razon").value : "",
+        pagos: pagos
+    };
+
+    fetch(`/cajero/mesa/{{ mesa.id }}/confirmar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (d.ok) {
+            alert(`${tipoActual.toUpperCase()} ${d.numero} emitida correctamente.`);
+            window.location.href = "{{ url_for('cajero.dashboard') }}";
+        } else {
+            alert(d.error || "Error al emitir.");
+        }
+    });
+}
+</script>
+{% endblock %}

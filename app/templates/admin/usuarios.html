@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}— Usuarios{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Gestión de usuarios</h1>
+    <button class="btn-primary" onclick="abrirModal()">+ Nuevo usuario</button>
+</div>
+
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>DNI</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in usuarios %}
+            <tr id="usr-{{ u.id }}">
+                <td>{{ u.nombre }} {{ u.apellido }}</td>
+                <td>{{ u.dni }}</td>
+                <td><span class="rol-badge rol-{{ u.rol.nombre }}">{{ u.rol.nombre }}</span></td>
+                <td>
+                    <span class="estado-badge {{ 'activo' if u.activo else 'inactivo' }}">
+                        {{ 'Activo' if u.activo else 'Inactivo' }}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-sm" onclick="toggleUsuario({{ u.id }})">
+                        {{ 'Desactivar' if u.activo else 'Activar' }}
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title">Nuevo usuario</span>
+            <button class="btn-icon" onclick="cerrarModal()">✕</button>
+        </div>
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="inp-nombre" placeholder="Nombre">
+        </div>
+        <div class="form-group">
+            <label>Apellido</label>
+            <input type="text" id="inp-apellido" placeholder="Apellido">
+        </div>
+        <div class="form-group">
+            <label>DNI</label>
+            <input type="text" id="inp-dni" placeholder="8 dígitos" maxlength="8">
+        </div>
+        <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" id="inp-password" placeholder="Contraseña inicial">
+        </div>
+        <div class="form-group">
+            <label>Rol</label>
+            <select id="inp-rol">
+                {% for r in roles %}
+                <option value="{{ r.id }}">{{ r.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn-primary" onclick="crearUsuario()">Crear</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function abrirModal()  { document.getElementById("modalOverlay").classList.add("show"); }
+function cerrarModal() { document.getElementById("modalOverlay").classList.remove("show"); }
+
+function toggleUsuario(id) {
+    fetch(`/admin/usuarios/toggle/${id}`, { method: "POST" })
+        .then(r => r.json())
+        .then(d => d.ok ? location.reload() : alert(d.error));
+}
+
+function crearUsuario() {
+    const data = {
+        nombre  : document.getElementById("inp-nombre").value,
+        apellido: document.getElementById("inp-apellido").value,
+        dni     : document.getElementById("inp-dni").value,
+        password: document.getElementById("inp-password").value,
+        rol_id  : document.getElementById("inp-rol").value,
+    };
+    if (!data.nombre || !data.dni || !data.password) {
+        alert("Nombre, DNI y contraseña son obligatorios."); return;
+    }
+    if (data.dni.length !== 8) { alert("El DNI debe tener 8 dígitos."); return; }
+    fetch("/admin/usuarios/crear", {
+        method  : "POST",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (!d.ok) { alert(d.error); return; }
+        cerrarModal(); location.reload();
+    });
+}
+</script>
+{% endblock %}

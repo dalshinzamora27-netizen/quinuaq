@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}— Cuenta Mesa {{ mesa.numero }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Cuenta — Mesa {{ mesa.numero }}</h1>
+    <span class="page-sub">{{ comanda.comensales }} comensales</span>
+</div>
+
+<div class="card cuenta-card">
+    <table class="table">
+        <thead>
+            <tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.nombre }}</td>
+                <td>{{ item.cantidad }}</td>
+                <td>S/ {{ "%.2f"|format(item.precio) }}</td>
+                <td>S/ {{ "%.2f"|format(item.total) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="cuenta-totales">
+        <div class="cuenta-row"><span>Subtotal</span><span>S/ {{ "%.2f"|format(subtotal) }}</span></div>
+        <div class="cuenta-row"><span>IGV (18%)</span><span>S/ {{ "%.2f"|format(igv) }}</span></div>
+        <div class="cuenta-row cuenta-total"><span>Total</span><span>S/ {{ "%.2f"|format(total) }}</span></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px">
+        <a href="{{ url_for('mozo.dashboard') }}" class="btn-secondary">← Volver a mesas</a>
+        <button class="btn-primary" onclick="solicitarCuenta()">Solicitar cuenta al cliente</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function solicitarCuenta() {
+    fetch(`/mozo/mesa/{{ mesa.id }}/solicitar_cuenta`, { method: "POST" })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                alert("Mesa marcada como 'Esperando pago'.");
+                window.location.href = "{{ url_for('mozo.dashboard') }}";
+            }
+        });
+}
+</script>
+{% endblock %}

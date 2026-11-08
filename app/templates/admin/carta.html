@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}— Carta{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Gestión de carta</h1>
+    <button class="btn-primary" onclick="abrirModal()">+ Agregar producto</button>
+</div>
+
+{% for cat in categorias %}
+<div class="card" style="margin-bottom:12px">
+    <div class="card-header">
+        <span class="card-title">{{ cat.nombre }}</span>
+        <span class="badge-tipo {{ cat.tipo }}">{{ cat.tipo }}</span>
+    </div>
+    {% for p in productos if p.categoria_id == cat.id %}
+    <div class="product-row" id="prod-{{ p.id }}">
+        <div class="product-info">
+            <span class="product-name">{{ p.nombre }}</span>
+            <span class="product-desc">{{ p.descripcion }}</span>
+        </div>
+        <span class="product-price">S/ {{ "%.2f"|format(p.precio) }}</span>
+        <label class="toggle">
+            <input type="checkbox" {{ 'checked' if p.disponible }}
+                   onchange="toggleProducto({{ p.id }}, this)">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+        <button class="btn-icon" onclick="eliminarProducto({{ p.id }})">✕</button>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+<!-- Modal agregar producto -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title">Nuevo producto</span>
+            <button class="btn-icon" onclick="cerrarModal()">✕</button>
+        </div>
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="inp-nombre" placeholder="Nombre del plato">
+        </div>
+        <div class="form-group">
+            <label>Descripción</label>
+            <input type="text" id="inp-desc" placeholder="Descripción breve">
+        </div>
+        <div class="form-group">
+            <label>Precio S/</label>
+            <input type="number" id="inp-precio" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+            <label>Categoría</label>
+            <select id="inp-cat">
+                {% for cat in categorias %}
+                <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn-primary" onclick="agregarProducto()">Guardar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleProducto(id, el) {
+    fetch(`/admin/carta/toggle/${id}`, { method: "POST" })
+        .then(r => r.json())
+        .then(d => {
+            const row = document.getElementById(`prod-${id}`);
+            row.style.opacity = d.disponible ? "1" : "0.45";
+        });
+}
+
+function eliminarProducto(id) {
+    if (!confirm("¿Eliminar este producto?")) return;
+    fetch(`/admin/carta/eliminar/${id}`, { method: "POST" })
+        .then(r => r.json())
+        .then(d => d.ok ? document.getElementById(`prod-${id}`).remove() : alert(d.error));
+}
+
+function abrirModal()  { document.getElementById("modalOverlay").classList.add("show"); }
+function cerrarModal() { document.getElementById("modalOverlay").classList.remove("show"); }
+
+function agregarProducto() {
+    const data = {
+        nombre       : document.getElementById("inp-nombre").value,
+        descripcion  : document.getElementById("inp-desc").value,
+        precio       : document.getElementById("inp-precio").value,
+        categoria_id : document.getElementById("inp-cat").value,
+    };
+    if (!data.nombre || !data.precio) { alert("Nombre y precio son obligatorios."); return; }
+    fetch("/admin/carta/agregar", {
+        method  : "POST",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (!d.ok) { alert(d.error); return; }
+        cerrarModal(); location.reload();
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}— Reportes{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Reporte mensual y ranking de platos</h1>
+</div>
+
+<div class="card">
+    <form method="GET" class="reporte-filtros">
+        <div class="form-group">
+            <label>Desde</label>
+            <input type="date" name="desde" value="{{ desde }}">
+        </div>
+        <div class="form-group">
+            <label>Hasta</label>
+            <input type="date" name="hasta" value="{{ hasta }}">
+        </div>
+        <div class="form-group">
+            <label>Ordenar por</label>
+            <select name="orden">
+                <option value="unidades" {{ 'selected' if orden == 'unidades' }}>Unidades vendidas</option>
+                <option value="ingresos" {{ 'selected' if orden == 'ingresos' }}>Ingresos generados</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-primary" style="align-self:flex-end">Filtrar</button>
+    </form>
+</div>
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-label">Ventas emitidas en el rango</div>
+        <div class="metric-val">{{ total_ventas }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Ingresos totales (con IGV)</div>
+        <div class="metric-val">S/ {{ "%.2f"|format(total_ingresos) }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><span class="card-title">Top 10 productos más vendidos</span></div>
+
+    {% if top10 %}
+    <div class="ranking-chart">
+        {% set max_val = (top10[0].unidades if orden == 'unidades' else top10[0].ingresos) | float %}
+        {% for item in top10 %}
+        {% set val = (item.unidades if orden == 'unidades' else item.ingresos) | float %}
+        <div class="ranking-row">
+            <span class="ranking-name">{{ item.nombre }}</span>
+            <div class="ranking-bar-track">
+                <div class="ranking-bar" style="width: {{ (val / max_val * 100) if max_val > 0 else 0 }}%"></div>
+            </div>
+            <span class="ranking-val">
+                {% if orden == 'unidades' %}
+                    {{ item.unidades }} u.
+                {% else %}
+                    S/ {{ "%.2f"|format(item.ingresos) }}
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <table class="table" style="margin-top:16px">
+        <thead>
+            <tr><th>#</th><th>Producto</th><th>Unidades</th><th>Ingresos</th></tr>
+        </thead>
+        <tbody>
+            {% for item in top10 %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item.nombre }}</td>
+                <td>{{ item.unidades }}</td>
+                <td>S/ {{ "%.2f"|format(item.ingresos) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:13px;color:#888">No hay ventas registradas en este rango de fechas.</p>
+    {% endif %}
+</div>
+{% endblock %}

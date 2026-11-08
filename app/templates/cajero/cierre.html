@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}— Cierre de turno{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Cierre de turno</h1>
+</div>
+
+<div class="card cuenta-card">
+    <div class="card-header"><span class="card-title">Resumen del turno — {{ ventas|length }} ventas</span></div>
+
+    <div class="cuenta-row"><span>Efectivo</span><span>S/ {{ "%.2f"|format(desglose.get('efectivo',0)) }}</span></div>
+    <div class="cuenta-row"><span>Tarjeta</span><span>S/ {{ "%.2f"|format(desglose.get('tarjeta',0)) }}</span></div>
+    <div class="cuenta-row"><span>Yape/Plin</span><span>S/ {{ "%.2f"|format(desglose.get('yape_plin',0)) }}</span></div>
+    <div class="cuenta-row cuenta-total"><span>Total esperado</span><span>S/ {{ "%.2f"|format(total_esperado) }}</span></div>
+
+    <div class="form-group" style="margin-top:16px">
+        <label>Efectivo real en caja</label>
+        <input type="number" id="inp-efectivo-real" step="0.01" min="0" placeholder="0.00">
+    </div>
+
+    <button class="btn-primary" onclick="calcularDiferencia()">Calcular diferencia</button>
+
+    <div id="resultado" style="margin-top:14px;display:none"></div>
+
+    <a href="{{ url_for('cajero.dashboard') }}" class="btn-secondary" style="display:inline-block;margin-top:16px">← Volver</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calcularDiferencia() {
+    const efectivoReal = document.getElementById("inp-efectivo-real").value;
+    fetch("{{ url_for('cajero.confirmar_cierre') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ efectivo_real: efectivoReal })
+    }).then(r => r.json()).then(d => {
+        const el = document.getElementById("resultado");
+        let color = "#3B6D11", texto = "Caja exacta ✓";
+        if (d.tipo === "sobrante") { color = "#185FA5"; texto = `Sobrante de S/ ${Math.abs(d.diferencia).toFixed(2)}`; }
+        if (d.tipo === "faltante") { color = "#993C1D"; texto = `Faltante de S/ ${Math.abs(d.diferencia).toFixed(2)}`; }
+        el.style.display = "block";
+        el.style.padding = "12px";
+        el.style.borderRadius = "8px";
+        el.style.background = color + "22";
+        el.style.color = color;
+        el.style.fontSize = "13px";
+        el.style.fontWeight = "600";
+        el.textContent = `Efectivo esperado: S/ ${d.efectivo_esperado.toFixed(2)} — ${texto}`;
+    });
+}
+</script>
+{% endblock %}

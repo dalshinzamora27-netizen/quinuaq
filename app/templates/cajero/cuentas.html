@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}— Cuentas{% endblock %}
+
+{% block head %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Cuentas por cobrar</h1>
+    <a href="{{ url_for('cajero.cierre') }}" class="btn-secondary">Cierre de turno</a>
+</div>
+
+<div class="card">
+    {% if mesas %}
+    <table class="table">
+        <thead>
+            <tr><th>Mesa</th><th>Capacidad</th><th>Estado</th><th>Acción</th></tr>
+        </thead>
+        <tbody>
+            {% for m in mesas %}
+            <tr>
+                <td>Mesa {{ m.numero }}</td>
+                <td>{{ m.capacidad }} personas</td>
+                <td><span class="estado-badge" style="background:#FAEEDA;color:#854F0B">Esperando pago</span></td>
+                <td><a href="{{ url_for('cajero.emitir', mesa_id=m.id) }}" class="btn-sm">Emitir comprobante</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:13px;color:#888">No hay mesas esperando pago.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const socket = io();
+socket.on("mesa_actualizada", () => location.reload());
+</script>
+{% endblock %}

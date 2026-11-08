@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}— Mesas{% endblock %}
+
+{% block head %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Estado de mesas</h1>
+    <div class="leyenda">
+        <span class="ley-item libre">● Libre</span>
+        <span class="ley-item ocupada">● Ocupada</span>
+        <span class="ley-item esperando_pago">● Esperando pago</span>
+        <span class="ley-item mantenimiento">● Mantenimiento</span>
+    </div>
+</div>
+
+<div class="mesas-grid" id="mesasGrid">
+    {% for m in mesas %}
+    <div class="mesa-card {{ m.estado }}" id="mesa-{{ m.id }}"
+         onclick="clickMesa({{ m.id }}, '{{ m.estado }}')">
+        <div class="mesa-num">Mesa {{ m.numero }}</div>
+        <div class="mesa-estado">{{ m.estado|replace('_',' ') }}</div>
+        <div class="mesa-cap">{{ m.capacidad }} personas</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal mesa libre: abrir comanda -->
+<div class="modal-overlay" id="modalAbrir">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" id="tituloAbrir">Abrir comanda</span>
+            <button class="btn-icon" onclick="cerrarModales()">✕</button>
+        </div>
+        <div class="form-group">
+            <label>Número de comensales</label>
+            <input type="number" id="inp-comensales" min="1" value="2">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="cerrarModales()">Cancelar</button>
+            <button class="btn-primary" onclick="confirmarAbrir()">Abrir comanda</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal mesa ocupada/otro estado: cambiar estado -->
+<div class="modal-overlay" id="modalEstado">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" id="tituloEstado">Mesa</span>
+            <button class="btn-icon" onclick="cerrarModales()">✕</button>
+        </div>
+        <button class="btn-primary" style="width:100%;margin-bottom:10px" onclick="irAComanda()">
+            Ver / agregar pedido
+        </button>
+        <p style="font-size:13px;color:#888;margin-bottom:12px">O cambiar estado de la mesa:</p>
+        <div class="estado-options">
+            <button class="estado-opt libre"          onclick="setEstado('libre')">Libre</button>
+            <button class="estado-opt ocupada"        onclick="setEstado('ocupada')">Ocupada</button>
+            <button class="estado-opt esperando_pago" onclick="setEstado('esperando_pago')">Esperando pago</button>
+            <button class="estado-opt mantenimiento"  onclick="setEstado('mantenimiento')">Mantenimiento</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const socket = io();
+let mesaActivaId = null;
+
+socket.on("mesa_actualizada", (data) => {
+    const card = document.getElementById(`mesa-${data.id}`);
+    if (!card) return;
+    card.className = `mesa-card ${data.estado}`;
+    card.querySelector(".mesa-estado").textContent = data.estado.replace("_", " ");
+});
+
+function clickMesa(id, estado) {
+    mesaActivaId = id;
+    if (estado === "libre") {
+        document.getElementById("tituloAbrir").textContent = "Abrir comanda — Mesa";
+        document.getElementById("modalAbrir").classList.add("show");
+    } else {
+        document.getElementById("tituloEstado").textContent = "Mesa " + id;
+        document.getElementById("modalEstado").classList.add("show");
+    }
+}
+
+function confirmarAbrir() {
+    const comensales = document.getElementById("inp-comensales").value;
+    fetch(`/mozo/mesa/${mesaActivaId}/abrir`, {
+        method  : "POST",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify({ comensales })
+    }).then(r => r.json()).then(d => {
+        if (d.ok) {
+            window.location.href = `/mozo/mesa/${mesaActivaId}/comanda`;
+        } else {
+            alert(d.error || "Error al abrir la comanda.");
+        }
+    });
+}
+
+function irAComanda() {
+    window.location.href = `/mozo/mesa/${mesaActivaId}/comanda`;
+}
+
+function setEstado(nuevoEstado) {
+    fetch(`/mozo/mesa/${mesaActivaId}/estado`, {
+        method  : "POST",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify({ estado: nuevoEstado })
+    }).then(r => r.json()).then(d => {
+        if (!d.ok) alert(d.error);
+        cerrarModales();
+    });
+}
+
+function cerrarModales() {
+    document.getElementById("modalAbrir").classList.remove("show");
+    document.getElementById("modalEstado").classList.remove("show");
+    mesaActivaId = null;
+}
+</script>
+{% endblock %}
